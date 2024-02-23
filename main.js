@@ -10,5 +10,3 @@ const element = createElement(
   const container = document.querySelector('root')
 
   render(element, root)
-
-  console.log(element)

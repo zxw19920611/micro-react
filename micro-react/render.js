@@ -15,25 +15,44 @@ function createDom(fiber) {
 
 // 发出第一个fiber
 function render(element, container) {
-    nextUnitOfWork = {
+    console.log(1)
+    wipRoot = {
         dom: container,
         props: {
             children: [element]
         },
-        sibiling: null,
+        sibling: null,
         child: null,
         parent: null
     }
+    nextUnitOfWork = wipRoot
 }
 
 let nextUnitOfWork = null
+let wipRoot = null
+
+function commitRoot() {
+    commitWork(wipRoot.child)
+    wipRoot = null
+}
+
+function commitWork(fiber) {
+    if (!fiber) {
+        return
+    }
+    const parentDom = fiber.parent.dom
+    parentDom.append(fiber.dom)
+    commitWork(fiber.child)
+    // console.log(fiber, 'fiber')
+    commitWork(fiber.sibling)
+    
+}
 
 //调度函数
 function workLoop(deadLine) {
     // 应该退出
     let shoulYield = false
     // 有工作 且不应该退出 浏览器一直空闲 while一直执行
-    // console.log(nextUnitOfWork, 'nextUnitOfWork')
     while (nextUnitOfWork && !shoulYield) {
         // 做工作
         nextUnitOfWork = performUnitOfWork(nextUnitOfWork)
@@ -42,9 +61,14 @@ function workLoop(deadLine) {
     }
     // 没有足够时间，请求下一次浏览器空闲的时候执行
     requestIdleCallback(workLoop)
+    // commit阶段 异步渲染 同步提交
+    if (!nextUnitOfWork && wipRoot) {
+        commitRoot()
+    }
 }
 
 //第一次请求
+console.log(2)
 requestIdleCallback(workLoop)
 
 function performUnitOfWork(fiber) {
@@ -53,10 +77,10 @@ function performUnitOfWork(fiber) {
         fiber.dom = createDom(fiber)
     }
 
-    // 追加到父节点
-    if (fiber.parent) {
-        fiber.parent.dom.append(fiber.dom)
-    }
+    // // 追加到父节点
+    // if (fiber.parent) {
+    //     fiber.parent.dom.append(fiber.dom)
+    // }
 
     // 给children创建fiber
     const elements = fiber.props.children
@@ -81,15 +105,14 @@ function performUnitOfWork(fiber) {
         }
         preSibling = newFiber
     }
-
     //返回下一个fiber
     if (fiber.child) {
         return fiber.child
     }
     let nextFiber = fiber
     while(nextFiber) {
-        if (nextFiber.sibiling) {
-            return nextFiber.sibiling
+        if (nextFiber.sibling) {
+            return nextFiber.sibling
         }
         nextFiber = nextFiber.parent
     }
